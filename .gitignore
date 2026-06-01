@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Node
+node_modules/
+webui/node_modules/
+
+# Vite
+dist/
+webui/dist/
+
+# Build
+build/
+coverage/
+
+# Runtime temp
+tmp/
+temp/
+
+# Secrets
+.env
+.env.*
+
+# Large local assets
+models/*
+!models/.gitkeep
+datasets/*
+!datasets/.gitkeep
