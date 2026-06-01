@@ -121,6 +121,10 @@ PHASE 5 -> Mechanical Cognition
 PHASE 6 -> Cybernetic Factory Runtime
 ```
 
+## Commercial Demo
+
+ScrewVision is also being shaped as a practical demo for lightweight industrial inspection workflows. See [docs/go-to-market.md](docs/go-to-market.md) for positioning, a two-minute demo script, outreach copy, and pricing anchors.
+
 ## License
 
 MIT
