@@ -23,6 +23,26 @@ def test_detect_endpoint() -> None:
     assert response.json()["detected"] is True
 
 
+def test_detect_response_contract() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/detect",
+        files={"image": ("screw.jpg", encode_test_screw(), "image/jpeg")},
+    )
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert "bbox" in payload
+    assert "confidence" in payload
+    assert "detector" in payload
+    assert "model" in payload
+    assert "screw_type" in payload
+    assert "material" in payload
+    assert "wear" in payload
+    assert payload["detector"] == "opencv"
+    assert payload["bbox"]["confidence"] == payload["confidence"]
+
+
 def test_roadmap_endpoint() -> None:
     client = TestClient(app)
     response = client.get("/roadmap")

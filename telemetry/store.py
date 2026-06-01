@@ -25,6 +25,7 @@ class TelemetryStore:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     source TEXT NOT NULL,
                     mode TEXT NOT NULL,
+                    detector TEXT NOT NULL DEFAULT 'unknown',
                     detected INTEGER NOT NULL,
                     family TEXT NOT NULL,
                     head_type TEXT NOT NULL,
@@ -33,6 +34,11 @@ class TelemetryStore:
                 )
                 """
             )
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(detections)").fetchall()}
+            if "detector" not in columns:
+                conn.execute("ALTER TABLE detections ADD COLUMN detector TEXT NOT NULL DEFAULT 'unknown'")
+            if "bbox" not in columns:
+                conn.execute("ALTER TABLE detections ADD COLUMN bbox TEXT")
 
     def record_detection(self, result: DetectionResult) -> None:
         payload = result.model_dump()
@@ -40,16 +46,18 @@ class TelemetryStore:
             conn.execute(
                 """
                 INSERT INTO detections (
-                    source, mode, detected, family, head_type, confidence, payload
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    source, mode, detector, detected, family, head_type, confidence, bbox, payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     result.source,
                     result.mode,
+                    result.detector,
                     int(result.detected),
                     result.classification.screw_family,
                     result.classification.head_type,
-                    result.classification.confidence,
+                    result.confidence,
+                    json.dumps(result.bbox.model_dump()) if result.bbox else None,
                     json.dumps(payload),
                 ),
             )
@@ -68,10 +76,20 @@ class TelemetryStore:
                 LIMIT 10
                 """
             ).fetchall()
+            detectors = conn.execute(
+                """
+                SELECT detector, COUNT(*) AS count
+                FROM detections
+                GROUP BY detector
+                ORDER BY count DESC
+                LIMIT 10
+                """
+            ).fetchall()
 
         return {
             "total_events": total,
             "detected_events": detected,
             "average_confidence": round(float(avg_conf), 3),
             "top_families": [{"family": row[0], "count": row[1]} for row in families],
+            "detectors": [{"detector": row[0], "count": row[1]} for row in detectors],
         }

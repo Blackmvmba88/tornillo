@@ -8,6 +8,14 @@ from pydantic import BaseModel, Field
 RuntimeMode = Literal["detection", "lab", "semantic"]
 
 
+class BoundingBox(BaseModel):
+    x: int
+    y: int
+    width: int
+    height: int
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
 class GeometryEstimate(BaseModel):
     head_diameter_px: float = 0.0
     shaft_diameter_px: float = 0.0
@@ -29,6 +37,13 @@ class DetectionResult(BaseModel):
     source: str
     mode: RuntimeMode
     detected: bool
+    detector: str
+    model: str | None = None
+    screw_type: str = "unknown"
+    material: str = "unknown"
+    wear: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    bbox: BoundingBox | None = None
     classification: ScrewClassification
     geometry: GeometryEstimate
     defect_flags: list[str] = Field(default_factory=list)
