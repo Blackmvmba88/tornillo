@@ -1,5 +1,10 @@
 # BlackMamba ScrewVision
 
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![FastAPI](https://img.shields.io/badge/FastAPI-runtime-009688)
+![OpenCV](https://img.shields.io/badge/OpenCV-vision-5C3EE8)
+
 AI runtime for screw recognition, classification, geometry estimation, and industrial analysis.
 
 This first implementation is intentionally runnable before a custom model exists:
