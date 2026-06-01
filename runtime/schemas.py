@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 RuntimeMode = Literal["detection", "lab", "semantic"]
+InspectionResult = Literal["PASS", "REVIEW", "FAIL"]
 
 
 class BoundingBox(BaseModel):
@@ -43,6 +44,8 @@ class DetectionResult(BaseModel):
     material: str = "unknown"
     wear: float = Field(default=0.0, ge=0.0, le=1.0)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    quality_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    inspection_result: InspectionResult = "REVIEW"
     bbox: BoundingBox | None = None
     classification: ScrewClassification
     geometry: GeometryEstimate

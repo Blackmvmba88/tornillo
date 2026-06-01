@@ -39,8 +39,11 @@ def test_detect_response_contract() -> None:
     assert "screw_type" in payload
     assert "material" in payload
     assert "wear" in payload
+    assert "quality_score" in payload
+    assert "inspection_result" in payload
     assert payload["detector"] == "opencv"
     assert payload["bbox"]["confidence"] == payload["confidence"]
+    assert payload["inspection_result"] in {"PASS", "REVIEW", "FAIL"}
 
 
 def test_roadmap_endpoint() -> None:

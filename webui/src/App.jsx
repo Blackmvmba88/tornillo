@@ -23,6 +23,20 @@ function Metric({ icon: Icon, label, value }) {
   );
 }
 
+function InspectionBadge({ result }) {
+  const styles = {
+    PASS: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+    REVIEW: "border-amber-400/50 bg-amber-400/10 text-amber-300",
+    FAIL: "border-red-500/40 bg-red-500/10 text-red-300",
+  };
+  return (
+    <div className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold ${styles[result] || styles.REVIEW}`}>
+      <Gauge size={16} />
+      {result || "REVIEW"}
+    </div>
+  );
+}
+
 function App() {
   const [summary, setSummary] = useState(null);
   const [roadmap, setRoadmap] = useState(null);
@@ -188,9 +202,12 @@ function App() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold">Latest Analysis</h2>
             {result && (
-              <div className="inline-flex w-fit items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-sm text-zinc-300">
-                <Activity size={16} />
-                {result.detector} {result.model ? `/ ${result.model}` : ""}
+              <div className="flex flex-wrap gap-2">
+                <InspectionBadge result={result.inspection_result} />
+                <div className="inline-flex w-fit items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-sm text-zinc-300">
+                  <Activity size={16} />
+                  {result.detector} {result.model ? `/ ${result.model}` : ""}
+                </div>
               </div>
             )}
           </div>
@@ -222,8 +239,8 @@ function App() {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Metric icon={Wrench} label="Type" value={result.screw_type} />
                 <Metric icon={Gauge} label="Confidence" value={result.confidence} />
-                <Metric icon={Activity} label="Wear" value={result.wear} />
-                <Metric icon={Network} label="Material" value={result.material} />
+                <Metric icon={Activity} label="Quality" value={result.quality_score} />
+                <Metric icon={Network} label="Inspection" value={result.inspection_result} />
               </div>
 
               <pre className="max-h-[360px] overflow-auto rounded-md bg-zinc-900 p-4 text-sm text-zinc-100">
@@ -257,6 +274,12 @@ function App() {
         <div className="rounded-md border border-zinc-800 bg-zinc-950 p-5">
           <h2 className="text-lg font-semibold">Inventory Signals</h2>
           <div className="mt-4 space-y-3">
+            {(summary?.inspection_results || []).map((item) => (
+              <div key={item.result} className="flex items-center justify-between border-b border-zinc-800 pb-2 text-sm">
+                <span className="text-zinc-300">{item.result}</span>
+                <span className="font-semibold">{item.count}</span>
+              </div>
+            ))}
             {(summary?.top_families || []).map((item) => (
               <div key={item.family} className="flex items-center justify-between border-b border-zinc-800 pb-2 text-sm">
                 <span className="text-zinc-300">{item.family}</span>
