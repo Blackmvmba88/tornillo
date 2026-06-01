@@ -6,6 +6,7 @@ This first implementation is intentionally runnable before a custom model exists
 
 - FastAPI detection API
 - OpenCV morphology fallback analyzer
+- Detector abstraction with bounding box response contract
 - SQLite telemetry store
 - CLI image analyzer
 - React dashboard shell
@@ -69,9 +70,31 @@ python3.11 scripts/dev.py
 - `lab`: morphology metrics and contour-oriented analysis
 - `semantic`: experimental compatibility and industrial-context layer
 
+## Detection Contract
+
+`POST /detect` returns a stable detector-neutral payload:
+
+```json
+{
+  "detector": "opencv",
+  "model": "contour-heuristic",
+  "screw_type": "screw_or_bolt",
+  "material": "bright_steel_or_aluminum",
+  "wear": 0.12,
+  "confidence": 0.71,
+  "bbox": {
+    "x": 10,
+    "y": 20,
+    "width": 140,
+    "height": 24,
+    "confidence": 0.71
+  }
+}
+```
+
 ## Current AI Strategy
 
-The repo ships with a deterministic OpenCV analyzer so the system is useful immediately. A YOLOv8 detector can be added under `ai/detectors.py` once trained weights are available in `models/`.
+The repo ships with a deterministic OpenCV detector so the system is useful immediately. A YOLOv8 detector can be added under `ai/detectors.py` once trained weights and inference wiring are available in `models/`.
 
 ## Roadmap
 

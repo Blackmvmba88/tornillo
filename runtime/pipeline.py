@@ -5,14 +5,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ai.classifier import HeuristicScrewClassifier
+from ai.detectors import Detector, get_detector
 from runtime.schemas import DetectionResult, RuntimeMode
 
 
 class ScrewVisionRuntime:
-    def __init__(self, mode: RuntimeMode = "detection") -> None:
+    def __init__(self, mode: RuntimeMode = "detection", detector: Detector | None = None) -> None:
         self.mode = mode
-        self.classifier = HeuristicScrewClassifier()
+        self.detector = detector or get_detector()
 
     def analyze_image_path(self, path: Path) -> DetectionResult:
         if not path.exists():
@@ -22,7 +22,7 @@ class ScrewVisionRuntime:
 
     def analyze_image_bytes(self, payload: bytes, source: str = "upload") -> DetectionResult:
         image = self._decode(payload)
-        return self.classifier.classify(image=image, source=source, mode=self.mode)
+        return self.detector.detect(image=image, source=source, mode=self.mode)
 
     @staticmethod
     def _decode(payload: bytes) -> np.ndarray:

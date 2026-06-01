@@ -21,5 +21,10 @@ def test_runtime_detects_synthetic_screw() -> None:
 
     assert result.detected is True
     assert result.mode == "lab"
+    assert result.detector == "opencv"
+    assert result.bbox is not None
+    assert result.bbox.width > 0
+    assert result.bbox.height > 0
     assert result.geometry.length_px > 100
-    assert result.classification.confidence > 0
+    assert result.confidence > 0
+    assert result.classification.confidence == result.confidence

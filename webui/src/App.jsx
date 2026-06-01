@@ -21,6 +21,8 @@ function App() {
   const [summary, setSummary] = useState(null);
   const [roadmap, setRoadmap] = useState(null);
   const [result, setResult] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageSize, setImageSize] = useState(null);
   const [busy, setBusy] = useState(false);
 
   async function refreshSummary() {
@@ -36,6 +38,9 @@ function App() {
   async function uploadImage(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+    setImageSize(null);
     setBusy(true);
     const data = new FormData();
     data.append("image", file);
@@ -49,6 +54,22 @@ function App() {
     refreshSummary().catch(() => setSummary({ total_events: 0, detected_events: 0, average_confidence: 0, top_families: [] }));
     refreshRoadmap().catch(() => setRoadmap(null));
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const bboxStyle =
+    result?.bbox && imageSize
+      ? {
+          left: `${(result.bbox.x / imageSize.width) * 100}%`,
+          top: `${(result.bbox.y / imageSize.height) * 100}%`,
+          width: `${(result.bbox.width / imageSize.width) * 100}%`,
+          height: `${(result.bbox.height / imageSize.height) * 100}%`,
+        }
+      : null;
 
   return (
     <main className="min-h-screen">
@@ -79,11 +100,51 @@ function App() {
 
       <section className="mx-auto grid max-w-6xl gap-5 px-5 pb-8 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-md border border-zinc-800 bg-zinc-950 p-5">
-          <h2 className="text-lg font-semibold">Latest Analysis</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold">Latest Analysis</h2>
+            {result && (
+              <div className="inline-flex w-fit items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-sm text-zinc-300">
+                <Activity size={16} />
+                {result.detector} {result.model ? `/ ${result.model}` : ""}
+              </div>
+            )}
+          </div>
           {result ? (
-            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md bg-zinc-900 p-4 text-sm text-zinc-100">
-              {JSON.stringify(result, null, 2)}
-            </pre>
+            <div className="mt-4 space-y-4">
+              {previewUrl && (
+                <div className="relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-900">
+                  <img
+                    className="block max-h-[420px] w-full object-contain"
+                    src={previewUrl}
+                    alt="Uploaded screw"
+                    onLoad={(event) =>
+                      setImageSize({
+                        width: event.currentTarget.naturalWidth,
+                        height: event.currentTarget.naturalHeight,
+                      })
+                    }
+                  />
+                  {bboxStyle && (
+                    <div className="absolute border-2 border-amber-300 bg-amber-300/10" style={bboxStyle}>
+                      <span className="absolute left-0 top-0 bg-amber-300 px-2 py-1 text-xs font-semibold text-zinc-950">
+                        {Math.round(result.confidence * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Metric icon={Wrench} label="Type" value={result.screw_type} />
+                <Metric icon={Gauge} label="Confidence" value={result.confidence} />
+                <Metric icon={Activity} label="Wear" value={result.wear} />
+                <Metric icon={Network} label="Material" value={result.material} />
+              </div>
+
+              <pre className="max-h-[360px] overflow-auto rounded-md bg-zinc-900 p-4 text-sm text-zinc-100">
+                {JSON.stringify(result, null, 2)}
+              </pre>
+            </div>
           ) : (
             <div className="mt-4 rounded-md border border-dashed border-zinc-700 p-10 text-center text-zinc-400">
               Upload a screw image to inspect morphology, geometry, and wear signals.
