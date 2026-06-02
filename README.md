@@ -107,6 +107,8 @@ Browser camera access usually requires a secure context. If mobile camera captur
   "material": "bright_steel_or_aluminum",
   "wear": 0.12,
   "confidence": 0.71,
+  "quality_score": 0.67,
+  "inspection_result": "REVIEW",
   "bbox": {
     "x": 10,
     "y": 20,

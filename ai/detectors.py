@@ -47,6 +47,8 @@ class OpenCVDetector:
                 material=classification.material_estimate,
                 wear=classification.wear_score,
                 confidence=classification.confidence,
+                quality_score=0.0,
+                inspection_result="FAIL",
                 bbox=None,
                 classification=classification,
                 geometry=GeometryEstimate(),
@@ -97,6 +99,14 @@ class OpenCVDetector:
         if aspect_ratio < 1.4 and detected:
             flags.append("short_fastener_or_top_down_view")
 
+        quality_score = self._quality_score(
+            detected=detected,
+            confidence=classification.confidence,
+            wear_score=classification.wear_score,
+            defect_count=len(flags),
+        )
+        inspection_result = self._inspection_result(quality_score)
+
         notes = ["OpenCV fallback analysis; replace with YOLO backend when trained weights exist."]
         if mode in {"lab", "semantic"}:
             notes.append("Lab metrics include contour-derived geometry in pixels.")
@@ -113,6 +123,8 @@ class OpenCVDetector:
             material=classification.material_estimate,
             wear=classification.wear_score,
             confidence=classification.confidence,
+            quality_score=quality_score,
+            inspection_result=inspection_result,
             bbox=bbox,
             classification=classification,
             geometry=geometry,
@@ -187,6 +199,23 @@ class OpenCVDetector:
         area_score = min(1.0, area / 4000.0)
         shape_score = min(1.0, max(0.2, aspect_ratio / 4.0))
         return round((area_score * 0.55) + (shape_score * 0.45), 3)
+
+    @staticmethod
+    def _quality_score(detected: bool, confidence: float, wear_score: float, defect_count: int) -> float:
+        if not detected:
+            return 0.0
+        wear_penalty = wear_score * 0.35
+        defect_penalty = min(0.3, defect_count * 0.15)
+        score = confidence - wear_penalty - defect_penalty
+        return round(max(0.0, min(1.0, score)), 3)
+
+    @staticmethod
+    def _inspection_result(quality_score: float) -> str:
+        if quality_score >= 0.72:
+            return "PASS"
+        if quality_score >= 0.45:
+            return "REVIEW"
+        return "FAIL"
 
 
 class YoloDetectorConfig:

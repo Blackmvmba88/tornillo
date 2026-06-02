@@ -30,6 +30,8 @@ class TelemetryStore:
                     family TEXT NOT NULL,
                     head_type TEXT NOT NULL,
                     confidence REAL NOT NULL,
+                    quality_score REAL NOT NULL DEFAULT 0.0,
+                    inspection_result TEXT NOT NULL DEFAULT 'REVIEW',
                     payload TEXT NOT NULL
                 )
                 """
@@ -39,6 +41,10 @@ class TelemetryStore:
                 conn.execute("ALTER TABLE detections ADD COLUMN detector TEXT NOT NULL DEFAULT 'unknown'")
             if "bbox" not in columns:
                 conn.execute("ALTER TABLE detections ADD COLUMN bbox TEXT")
+            if "quality_score" not in columns:
+                conn.execute("ALTER TABLE detections ADD COLUMN quality_score REAL NOT NULL DEFAULT 0.0")
+            if "inspection_result" not in columns:
+                conn.execute("ALTER TABLE detections ADD COLUMN inspection_result TEXT NOT NULL DEFAULT 'REVIEW'")
 
     def record_detection(self, result: DetectionResult) -> None:
         payload = result.model_dump()
@@ -46,8 +52,9 @@ class TelemetryStore:
             conn.execute(
                 """
                 INSERT INTO detections (
-                    source, mode, detector, detected, family, head_type, confidence, bbox, payload
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source, mode, detector, detected, family, head_type, confidence,
+                    quality_score, inspection_result, bbox, payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     result.source,
@@ -57,6 +64,8 @@ class TelemetryStore:
                     result.classification.screw_family,
                     result.classification.head_type,
                     result.confidence,
+                    result.quality_score,
+                    result.inspection_result,
                     json.dumps(result.bbox.model_dump()) if result.bbox else None,
                     json.dumps(payload),
                 ),
@@ -85,6 +94,14 @@ class TelemetryStore:
                 LIMIT 10
                 """
             ).fetchall()
+            inspections = conn.execute(
+                """
+                SELECT inspection_result, COUNT(*) AS count
+                FROM detections
+                GROUP BY inspection_result
+                ORDER BY count DESC
+                """
+            ).fetchall()
 
         return {
             "total_events": total,
@@ -92,4 +109,5 @@ class TelemetryStore:
             "average_confidence": round(float(avg_conf), 3),
             "top_families": [{"family": row[0], "count": row[1]} for row in families],
             "detectors": [{"detector": row[0], "count": row[1]} for row in detectors],
+            "inspection_results": [{"result": row[0], "count": row[1]} for row in inspections],
         }
