@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 API_PORT = 8000
 WEB_PORT = 5173
+DEV_HOST = "0.0.0.0"
 
 
 def port_open(port: int) -> bool:
@@ -44,12 +45,12 @@ def main() -> int:
     processes = [
         start_process(
             "api",
-            [str(api_python), "-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", str(API_PORT)],
+            [str(api_python), "-m", "uvicorn", "api.main:app", "--host", DEV_HOST, "--port", str(API_PORT)],
             ROOT,
         ),
         start_process(
             "webui",
-            ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", str(WEB_PORT)],
+            ["npm", "run", "dev", "--", "--host", DEV_HOST, "--port", str(WEB_PORT)],
             ROOT / "webui",
         ),
     ]
@@ -74,6 +75,7 @@ def main() -> int:
     print("\nScrewVision dev runtime", flush=True)
     print(f"  API:       http://127.0.0.1:{API_PORT}", flush=True)
     print(f"  Dashboard: http://localhost:{WEB_PORT}", flush=True)
+    print("  Network:   use your machine IP on the same ports", flush=True)
     print("  Stop:      Ctrl+C\n", flush=True)
 
     try:

@@ -69,6 +69,26 @@ Run API and dashboard together:
 python3.11 scripts/dev.py
 ```
 
+## Mobile Capture Demo
+
+The dashboard can capture a still image from the browser camera and submit it to `POST /detect`.
+
+Local machine:
+
+```bash
+python3.11 scripts/dev.py
+```
+
+Phone on the same network:
+
+```text
+http://YOUR_MACHINE_IP:5173
+```
+
+The dashboard derives the API URL from the page host, so a phone visiting `http://YOUR_MACHINE_IP:5173` will call `http://YOUR_MACHINE_IP:8000`.
+
+Browser camera access usually requires a secure context. If mobile camera capture is blocked over plain HTTP, use image upload, run the app directly on the phone as `localhost`, or put the dashboard behind HTTPS for the demo.
+
 ## Runtime Modes
 
 - `detection`: fast object and feature extraction
