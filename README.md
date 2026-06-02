@@ -5,29 +5,56 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-runtime-009688)
 ![OpenCV](https://img.shields.io/badge/OpenCV-vision-5C3EE8)
 
-AI runtime for screw recognition, classification, geometry estimation, and industrial analysis.
+ScrewVision is a lightweight industrial computer-vision runtime for screw recognition, morphology analysis, telemetry, and inspection workflows.
 
-This first implementation is intentionally runnable before a custom model exists:
+The project is intentionally runnable before custom model training exists. It uses deterministic OpenCV analysis today and keeps the detector contract ready for YOLO or future model backends.
+
+## Creator
+
+Created by **Iyari Cancino Gomez**, alias **BlackMamba**.
+
+## Current Release
+
+```text
+Latest: v0.4.0
+Focus: mobile capture + quality inspection scoring
+```
+
+Release line:
+
+| Version | Capability |
+| --- | --- |
+| `v0.1.0` | Foundation runtime |
+| `v0.2.0` | Visual detection layer and release automation |
+| `v0.3.0` | Mobile camera capture demo |
+| `v0.3.1` | Go-to-market documentation kit |
+| `v0.4.0` | `quality_score` and `PASS` / `REVIEW` / `FAIL` inspection results |
+
+## Product Surface
 
 - FastAPI detection API
-- OpenCV morphology fallback analyzer
-- Detector abstraction with bounding box response contract
+- OpenCV fallback detector
+- Detector abstraction for future YOLO integration
+- Bounding box response contract
+- Quality inspection scoring
 - SQLite telemetry store
 - CLI image analyzer
-- React dashboard shell
-- Tests for the runtime contracts
+- React/Vite dashboard
+- Mobile camera capture and upload fallback
+- CI for Python 3.11, Python 3.12, and WebUI build
+- Automated GitHub releases with packaged WebUI assets
 
 ## Project Structure
 
 ```text
-api/           FastAPI application
-runtime/       Frame/image analysis runtime
-ai/            Classifier and detector abstractions
+api/           FastAPI application and machine-readable roadmap
+runtime/       Image analysis runtime and schemas
+ai/            Detector protocol, OpenCV fallback, YOLO adapter shell
 telemetry/     SQLite event logging
 webui/         React + Tailwind dashboard
-docs/          Architecture and roadmap notes
+docs/          Architecture, roadmap, API, metacommands, and market notes
 scripts/       Local helper scripts
-tests/         Python tests
+tests/         Python contract tests
 models/        Model weights, ignored by git
 datasets/      Training datasets, ignored by git
 docker/        Deployment assets
@@ -39,28 +66,17 @@ docker/        Deployment assets
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest
-uvicorn api.main:app --reload --port 8000
-```
 
-Analyze an image:
-
-```bash
-python runtime/main.py path/to/screw.jpg
-```
-
-Call the API:
-
-```bash
-curl -X POST http://localhost:8000/detect -F image=@screw.jpg
-```
-
-Run the dashboard:
-
-```bash
 cd webui
 npm install
-npm run dev
+cd ..
+```
+
+Run checks:
+
+```bash
+.venv/bin/python -m pytest -q
+cd webui && npm run build
 ```
 
 Run API and dashboard together:
@@ -69,35 +85,59 @@ Run API and dashboard together:
 python3.11 scripts/dev.py
 ```
 
-## Mobile Capture Demo
+Open:
 
-The dashboard can capture a still image from the browser camera and submit it to `POST /detect`.
+```text
+http://localhost:5173
+```
 
-Local machine:
+## Mobile Demo
+
+Run the dev stack:
 
 ```bash
 python3.11 scripts/dev.py
 ```
 
-Phone on the same network:
+Open from a phone on the same network:
 
 ```text
 http://YOUR_MACHINE_IP:5173
 ```
 
-The dashboard derives the API URL from the page host, so a phone visiting `http://YOUR_MACHINE_IP:5173` will call `http://YOUR_MACHINE_IP:8000`.
+The dashboard derives the API URL from the page host, so a phone visiting `http://YOUR_MACHINE_IP:5173` calls `http://YOUR_MACHINE_IP:8000`.
 
-Browser camera access usually requires a secure context. If mobile camera capture is blocked over plain HTTP, use image upload, run the app directly on the phone as `localhost`, or put the dashboard behind HTTPS for the demo.
+Browser camera access usually requires HTTPS or `localhost`. If camera capture is blocked over plain HTTP, use upload fallback or serve the dashboard over HTTPS.
 
-## Runtime Modes
+## API Commands
 
-- `detection`: fast object and feature extraction
-- `lab`: morphology metrics and contour-oriented analysis
-- `semantic`: experimental compatibility and industrial-context layer
+Health:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Detect:
+
+```bash
+curl -X POST http://127.0.0.1:8000/detect -F image=@screw.jpg
+```
+
+Telemetry summary:
+
+```bash
+curl http://127.0.0.1:8000/telemetry/summary
+```
+
+Roadmap:
+
+```bash
+curl http://127.0.0.1:8000/roadmap
+```
 
 ## Detection Contract
 
-`POST /detect` returns a stable detector-neutral payload:
+`POST /detect` returns a detector-neutral payload:
 
 ```json
 {
@@ -119,33 +159,34 @@ Browser camera access usually requires a secure context. If mobile camera captur
 }
 ```
 
-## Current AI Strategy
+Inspection thresholds:
 
-The repo ships with a deterministic OpenCV detector so the system is useful immediately. A YOLOv8 detector can be added under `ai/detectors.py` once trained weights and inference wiring are available in `models/`.
+| Score | Result |
+| --- | --- |
+| `>= 0.72` | `PASS` |
+| `>= 0.45` and `< 0.72` | `REVIEW` |
+| `< 0.45` | `FAIL` |
 
-## Roadmap
+## Documentation
 
-The full product roadmap lives in [docs/roadmap.md](docs/roadmap.md) and is also exposed by the API:
+| Document | Purpose |
+| --- | --- |
+| [docs/api-reference.md](docs/api-reference.md) | Endpoints, schemas, runtime modes, scoring, telemetry |
+| [docs/metacommands.md](docs/metacommands.md) | Commands for development, PRs, releases, mobile demo, GitHub auth |
+| [docs/architecture.md](docs/architecture.md) | Runtime architecture and integration points |
+| [docs/roadmap.md](docs/roadmap.md) | Version history and future platform roadmap |
+| [docs/go-to-market.md](docs/go-to-market.md) | Demo script, positioning, outreach copy, pricing anchors |
 
-```bash
-curl http://localhost:8000/roadmap
-```
-
-Architecture evolution:
+## Roadmap Summary
 
 ```text
-PHASE 0 -> Object Detection
-PHASE 1 -> Morphology
-PHASE 2 -> Industrial Semantics
-PHASE 3 -> Edge Intelligence
-PHASE 4 -> Robotics
-PHASE 5 -> Mechanical Cognition
-PHASE 6 -> Cybernetic Factory Runtime
+v0.5.0 -> Multi-class industrial detection
+v0.6.0 -> Dataset factory
+v0.7.0 -> Calibration and measurement
+v1.0.0 -> Mechanical Intelligence Platform
 ```
 
-## Commercial Demo
-
-ScrewVision is also being shaped as a practical demo for lightweight industrial inspection workflows. See [docs/go-to-market.md](docs/go-to-market.md) for positioning, a two-minute demo script, outreach copy, and pricing anchors.
+The machine-readable roadmap lives in `api/roadmap.py` and is exposed at `GET /roadmap`.
 
 ## License
 
