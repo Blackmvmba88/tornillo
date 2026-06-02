@@ -1,9 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { Activity, Gauge, Network, Upload, Wrench } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Activity, Camera, CameraOff, Gauge, Network, Upload, Wrench } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import "./main.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+function defaultApiUrl() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window === "undefined") return "http://localhost:8000";
+  return `http://${window.location.hostname || "localhost"}:8000`;
+}
+
+const API_URL = defaultApiUrl();
 
 function Metric({ icon: Icon, label, value }) {
   return (
@@ -23,7 +29,11 @@ function App() {
   const [result, setResult] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [imageSize, setImageSize] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [busy, setBusy] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   async function refreshSummary() {
     const response = await fetch(`${API_URL}/telemetry/summary`);
@@ -35,19 +45,80 @@ function App() {
     setRoadmap(await response.json());
   }
 
-  async function uploadImage(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function analyzeFile(file) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
     setImageSize(null);
     setBusy(true);
+    setCameraError("");
     const data = new FormData();
     data.append("image", file);
-    const response = await fetch(`${API_URL}/detect`, { method: "POST", body: data });
-    setResult(await response.json());
-    await refreshSummary();
-    setBusy(false);
+    try {
+      const response = await fetch(`${API_URL}/detect`, { method: "POST", body: data });
+      if (!response.ok) throw new Error(`Detection failed with HTTP ${response.status}`);
+      setResult(await response.json());
+      await refreshSummary();
+    } catch (error) {
+      setCameraError(error.message || "Unable to analyze image.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function uploadImage(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await analyzeFile(file);
+  }
+
+  async function startCamera() {
+    setCameraError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Camera capture is not available in this browser. Try image upload instead.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+    } catch (error) {
+      setCameraError(error.message || "Unable to start camera.");
+    }
+  }
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraActive(false);
+  }
+
+  async function captureCamera() {
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video?.videoHeight) {
+      setCameraError("Camera is not ready yet.");
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+    if (!blob) {
+      setCameraError("Unable to capture camera frame.");
+      return;
+    }
+    await analyzeFile(new File([blob], "mobile-camera-capture.jpg", { type: "image/jpeg" }));
   }
 
   useEffect(() => {
@@ -60,6 +131,10 @@ function App() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   const bboxStyle =
     result?.bbox && imageSize
@@ -84,11 +159,21 @@ function App() {
               <p className="text-sm text-zinc-400">Mechanical intelligence runtime</p>
             </div>
           </div>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950">
-            <Upload size={17} />
-            {busy ? "Analyzing" : "Upload"}
-            <input className="hidden" type="file" accept="image/*" onChange={uploadImage} />
-          </label>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-100"
+              type="button"
+              onClick={cameraActive ? stopCamera : startCamera}
+            >
+              {cameraActive ? <CameraOff size={17} /> : <Camera size={17} />}
+              {cameraActive ? "Stop" : "Camera"}
+            </button>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950">
+              <Upload size={17} />
+              {busy ? "Analyzing" : "Upload"}
+              <input className="hidden" type="file" accept="image/*" capture="environment" onChange={uploadImage} />
+            </label>
+          </div>
         </div>
       </section>
 
@@ -147,9 +232,26 @@ function App() {
             </div>
           ) : (
             <div className="mt-4 rounded-md border border-dashed border-zinc-700 p-10 text-center text-zinc-400">
-              Upload a screw image to inspect morphology, geometry, and wear signals.
+              Upload or capture an image to inspect morphology, geometry, and wear signals.
             </div>
           )}
+          <div className={cameraActive || cameraError ? "mt-4 space-y-3" : "hidden"}>
+            <div className="overflow-hidden rounded-md border border-zinc-800 bg-zinc-900">
+              <video ref={videoRef} className="block max-h-[420px] w-full object-contain" muted playsInline />
+            </div>
+            {cameraError && <p className="text-sm text-amber-300">{cameraError}</p>}
+            {cameraActive && (
+              <button
+                className="inline-flex items-center gap-2 rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950"
+                type="button"
+                onClick={captureCamera}
+                disabled={busy}
+              >
+                <Camera size={17} />
+                {busy ? "Analyzing" : "Capture"}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="rounded-md border border-zinc-800 bg-zinc-950 p-5">
